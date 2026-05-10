@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import importlib
+import os
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 
@@ -25,13 +27,30 @@ def _get_torch_cuda_major() -> int | None:
     return int(_torch_cuda_ver.split(".")[0]) if _torch_cuda_ver else None
 
 
+def _set_bundled_ucx_module_dir(pkg) -> None:
+    if "UCX_MODULE_DIR" in os.environ:
+        return
+
+    pkg_file = getattr(pkg, "__file__", None)
+    if pkg_file is None:
+        return
+
+    ucx_module_dir = (
+        Path(pkg_file).resolve().parent.parent / f"{pkg.__name__}.libs" / "ucx"
+    )
+    if ucx_module_dir.is_dir():
+        os.environ["UCX_MODULE_DIR"] = str(ucx_module_dir)
+
+
 def _load_cuda_backend() -> str:
     cuda_major = _get_torch_cuda_major()
     if cuda_major is not None:
         pip_name = f"nixl-cu{cuda_major}"
         mod_name = f"nixl_cu{cuda_major}"
         try:
-            return importlib.import_module(mod_name).__name__
+            pkg = importlib.import_module(mod_name)
+            _set_bundled_ucx_module_dir(pkg)
+            return pkg.__name__
         except ModuleNotFoundError as e:
             if e.name != mod_name:
                 raise
@@ -41,7 +60,9 @@ def _load_cuda_backend() -> str:
     # CPU-only torch — use whatever backend is installed
     for mod_name in ("nixl_cu13", "nixl_cu12"):
         try:
-            return importlib.import_module(mod_name).__name__
+            pkg = importlib.import_module(mod_name)
+            _set_bundled_ucx_module_dir(pkg)
+            return pkg.__name__
         except ModuleNotFoundError as e:
             if e.name != mod_name:
                 # Re-raise if the error is not about the module we're trying to import

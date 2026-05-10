@@ -28,6 +28,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <sstream>
+#include <unordered_map>
 #include "utils/neuron.h"
 #include "utils/utils.h"
 #include <unistd.h>
@@ -1115,6 +1116,7 @@ xferBenchNixlWorker::exchangeIOV(const std::vector<std::vector<xferBenchIOV>> &l
     if (xferBenchConfig::isStorageBackend()) {
         size_t fd_idx = 0;
         uint64_t file_offset = 0;
+        std::unordered_map<std::string, uint64_t> obj_offsets;
         for (auto &iov_list : local_iovs) {
             std::vector<xferBenchIOV> remote_iov_list;
             int devidx = 0;
@@ -1123,7 +1125,10 @@ xferBenchNixlWorker::exchangeIOV(const std::vector<std::vector<xferBenchIOV>> &l
                     std::optional<xferBenchIOV> basic_desc;
                     basic_desc = initBasicDescObj(iov.len, iov.devId, iov.metaInfo);
                     if (basic_desc) {
-                        remote_iov_list.push_back(basic_desc.value());
+                        xferBenchIOV iov_remote(basic_desc.value());
+                        iov_remote.addr = obj_offsets[iov.metaInfo];
+                        obj_offsets[iov.metaInfo] += block_size;
+                        remote_iov_list.push_back(iov_remote);
                     }
                 } else if (XFERBENCH_BACKEND_GUSLI == xferBenchConfig::backend) {
                     xferBenchIOV iov_remote(iov);

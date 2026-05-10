@@ -249,3 +249,8 @@ else
                 install: true,
                 install_dir: get_option('bindir'))
 endif
+
+python3 = find_program('python3', required: false)
+if python3.found()
+    test('pairwise_sg_desc', python3, args: files('test/test_pairwise_sg_desc.py'))
+endif

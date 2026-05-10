@@ -16,6 +16,7 @@
  */
 
 #include "worker/nixl/nixl_worker.h"
+#include "worker/nixl/pairwise_sg_desc.h"
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -795,15 +796,19 @@ xferBenchNixlWorker::ensureFileHasConsistencyData(const GusliDeviceConfig &devic
 std::vector<std::vector<xferBenchIOV>>
 xferBenchNixlWorker::allocateMemory(int num_threads) {
     std::vector<std::vector<xferBenchIOV>> iov_lists;
-    size_t i, buffer_size, num_devices = 0;
+    size_t i, buffer_size, num_devices, first_mem_dev_id;
     nixl_opt_args_t opt_args;
 
-    if (isInitiator()) {
-        num_devices = xferBenchConfig::num_initiator_dev;
-    } else if (isTarget()) {
-        num_devices = xferBenchConfig::num_target_dev;
-    }
-    buffer_size = xferBenchConfig::total_buffer_size / (num_devices * num_threads);
+    const xferBenchDescConfig desc_config =
+        getPairwiseSgDescConfig(IS_PAIRWISE_AND_SG() && !xferBenchConfig::isStorageBackend(),
+                                isInitiator(),
+                                rt->getRank(),
+                                xferBenchConfig::num_initiator_dev,
+                                xferBenchConfig::num_target_dev);
+    buffer_size =
+        xferBenchConfig::total_buffer_size / (desc_config.configured_num_devices * num_threads);
+    num_devices = desc_config.desc_count;
+    first_mem_dev_id = desc_config.first_mem_dev_id;
 
     if (xferBenchConfig::storage_enable_direct) {
         if (xferBenchConfig::page_size == 0) {
@@ -836,7 +841,7 @@ xferBenchNixlWorker::allocateMemory(int num_threads) {
                     }
                 }
 
-                basic_desc = initBasicDescObj(buffer_size, i, unique_name);
+                basic_desc = initBasicDescObj(buffer_size, first_mem_dev_id + i, unique_name);
                 if (basic_desc) {
                     std::cout << "Creating obj: " << unique_name << std::endl;
                     iov_list.push_back(basic_desc.value());
@@ -868,8 +873,10 @@ xferBenchNixlWorker::allocateMemory(int num_threads) {
             for (i = 0; i < num_devices; i++) {
                 std::optional<xferBenchIOV> basic_desc;
                 // Use device IDs from parsed configuration (num_devices == gusli_devices.size())
-                basic_desc = initBasicDescBlk(
-                    buffer_size, gusli_devices[i].device_id, gusli_devices[i].dev_offset);
+                size_t dev_idx = first_mem_dev_id + i;
+                basic_desc = initBasicDescBlk(buffer_size,
+                                              gusli_devices[dev_idx].device_id,
+                                              gusli_devices[dev_idx].dev_offset);
                 if (basic_desc) {
                     iov_list.push_back(basic_desc.value());
                 }
@@ -917,7 +924,8 @@ xferBenchNixlWorker::allocateMemory(int num_threads) {
             std::vector<xferBenchIOV> iov_list;
             for (i = 0; i < num_devices; i++) {
                 std::optional<xferBenchIOV> basic_desc;
-                basic_desc = initBasicDescFile(buffer_size, remote_fds[file_idx], i);
+                basic_desc =
+                    initBasicDescFile(buffer_size, remote_fds[file_idx], first_mem_dev_id + i);
                 if (basic_desc) {
                     iov_list.push_back(basic_desc.value());
                 }
@@ -941,13 +949,13 @@ xferBenchNixlWorker::allocateMemory(int num_threads) {
                 // For GUSLI backend, use device ID from parsed configuration
                 int mem_dev_id = (XFERBENCH_BACKEND_GUSLI == xferBenchConfig::backend &&
                                   !gusli_devices.empty()) ?
-                    gusli_devices[i].device_id :
-                    i;
+                    gusli_devices[first_mem_dev_id + i].device_id :
+                    first_mem_dev_id + i;
                 basic_desc = initBasicDescDram(buffer_size, mem_dev_id);
                 break;
             }
             case VRAM_SEG:
-                basic_desc = initBasicDescVram(buffer_size, i);
+                basic_desc = initBasicDescVram(buffer_size, first_mem_dev_id + i);
                 break;
             default:
                 std::cerr << "Unsupported mem type: " << seg_type << std::endl;

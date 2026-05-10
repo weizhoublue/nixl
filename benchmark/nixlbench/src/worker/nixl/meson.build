@@ -16,6 +16,7 @@
 nixl_worker_sources = [
   'nixl_worker.cpp',
   'nixl_worker.h',
+  'pairwise_sg_desc.h',
 ]
 
 nixl_worker_deps = [openmp_dep, nixl_lib, nixl_build, nixl_serdes, tomlplusplus_dep]

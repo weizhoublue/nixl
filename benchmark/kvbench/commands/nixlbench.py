@@ -188,10 +188,11 @@ class NIXLBench:
         """Configure GDS and GDS_MT plugins (same logic for both)"""
         if source == "file":
             self.op_type = "READ"
-            self.target_seg_type = "VRAM"
+            self.initiator_seg_type = "VRAM"
         elif source == "gpu":
             self.op_type = "WRITE"
-            self.target_seg_type = "FILE"
+            self.initiator_seg_type = "VRAM"
+            self.target_seg_type = "DRAM"
         else:
             raise ValueError(f"Invalid source for GDS/GDS_MT: {source}")
 

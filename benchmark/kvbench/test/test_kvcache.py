@@ -15,6 +15,7 @@
 
 import os
 import sys
+import types
 from pathlib import Path
 
 import pytest  # type: ignore
@@ -100,3 +101,30 @@ def test_io_size(examples_dir, model_arch, model_config, expected_io_size):
 
     assert model is not None
     assert model.get_io_size() == expected_io_size
+
+
+@pytest.mark.parametrize(
+    "source, destination, expected_op_type",
+    [
+        ("file", "gpu", "READ"),
+        ("gpu", "file", "WRITE"),
+    ],
+)
+def test_gds_uses_vram_initiator_and_valid_target_segment(
+    monkeypatch, source, destination, expected_op_type
+):
+    nixl_module = types.ModuleType("nixl")
+    logging_module = types.ModuleType("nixl.logging")
+    logging_module.get_logger = lambda name: None
+    monkeypatch.setitem(sys.modules, "nixl", nixl_module)
+    monkeypatch.setitem(sys.modules, "nixl.logging", logging_module)
+
+    from commands.nixlbench import NIXLBench
+
+    bench = NIXLBench(None, None)
+
+    bench.configure_segment_type("GDS", source, destination)
+
+    assert bench.op_type == expected_op_type
+    assert bench.initiator_seg_type == "VRAM"
+    assert bench.target_seg_type == "DRAM"

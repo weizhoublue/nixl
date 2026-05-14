@@ -122,6 +122,8 @@ if __name__ == "__main__":
     agent_config1 = nixl_agent_config(True, enable_listen, target_port)
 
     target_agent = nixl_agent("target", agent_config1)
+    if target_port == 0:
+        target_port = target_agent.get_listen_port()
 
     malloc_addrs = []
 
@@ -148,6 +150,8 @@ if __name__ == "__main__":
     # Default port for initiator
     agent_config2 = nixl_agent_config(True, enable_listen, init_port)
     init_agent = nixl_agent("initiator", agent_config2)
+    if init_port == 0:
+        init_port = init_agent.get_listen_port()
 
     init_strs = []
     for _ in range(10):

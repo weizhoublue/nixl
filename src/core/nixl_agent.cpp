@@ -202,6 +202,11 @@ nixlAgent::~nixlAgent() {
     }
 }
 
+uint16_t
+nixlAgent::getListenPort() const {
+    return data->getListenPort();
+}
+
 nixl_status_t
 nixlAgent::getAvailPlugins (std::vector<nixl_backend_t> &plugins) {
     auto& plugin_manager = nixlPluginManager::getInstance();

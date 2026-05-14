@@ -134,6 +134,11 @@ class nixlAgentData {
             }
         }
 
+        uint16_t
+        getListenPort() const {
+            return listener ? listener->getPort() : 0;
+        }
+
     friend class nixlAgent;
 };
 

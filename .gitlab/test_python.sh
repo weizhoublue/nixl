@@ -89,7 +89,7 @@ python3 test/python/prep_xfer_perf.py array
 
 echo "==== Running python examples ===="
 cd examples/python
-python3 partial_md_example.py --init-port "$(get_next_tcp_port)" --target-port "$(get_next_tcp_port)"
+python3 partial_md_example.py --init-port=0 --target-port=0
 python3 partial_md_example.py --etcd
 python3 query_mem_example.py
 

@@ -107,9 +107,24 @@ kill -s INT $telePID
 gtest-parallel --workers=1 --serialize_test_cases ./bin/gtest -- --min-tcp-port="$min_gtest_port" --max-tcp-port="$max_gtest_port"
 ./bin/test_plugin
 
-# Run NIXL client-server test
-nixl_test_port=$(get_next_tcp_port)
-parallel --line-buffer --halt now,fail=1 ::: "./bin/nixl_test target" "sleep 3 ; ./bin/nixl_test initiator" ::: "127.0.0.1 $nixl_test_port"
+# Run NIXL client-server test with OS-assigned port to avoid TOCTOU race
+target_log=$(mktemp)
+trap "rm -f '$target_log'" EXIT
+NIXL_LOG_LEVEL=INFO ./bin/nixl_test target 127.0.0.1 0 2> "$target_log" &
+target_pid=$!
+nixl_test_port=""
+for _ in $(seq 30); do
+    nixl_test_port=$(awk '/MD listener is listening on port/ { print $NF; exit }' "$target_log")
+    [[ -n "$nixl_test_port" ]] && break
+    sleep 1
+done
+if [[ -z "$nixl_test_port" ]]; then
+    echo "Target (pid=$target_pid) failed to report port within 30s"
+    kill "$target_pid" 2>/dev/null
+    exit 1
+fi
+sleep 3 && ./bin/nixl_test initiator 127.0.0.1 "$nixl_test_port"
+wait "$target_pid"
 
 echo "${TEXT_YELLOW}==== Disabled tests==="
 echo "./bin/md_streamer disabled"

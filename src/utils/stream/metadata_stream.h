@@ -64,6 +64,7 @@ class nixlMDStreamListener: public nixlMetadataStream {
         void        startListenerForClients();
         void        startListenerForClient();
         std::string recvFromClient();
+        uint16_t    getPort() const { return port; }
 };
 
 class nixlMDStreamClient: public nixlMetadataStream {

@@ -439,6 +439,7 @@ PYBIND11_MODULE(_bindings, m) {
 
     py::class_<nixlAgent>(m, "nixlAgent")
         .def(py::init<std::string, nixlAgentConfig>())
+        .def("get_listen_port", &nixlAgent::getListenPort)
         .def("getAvailPlugins",
              [](nixlAgent &agent) -> std::vector<nixl_backend_t> {
                  std::vector<nixl_backend_t> backends;

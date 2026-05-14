@@ -52,6 +52,16 @@ class nixlAgent {
          */
         ~nixlAgent ();
 
+        /**
+         * @brief  Get the listen port assigned to this agent's metadata listener.
+         *         When listenPort is 0, the OS assigns an available port at bind time,
+         *         and this method returns that actual port.
+         *
+         * @return uint16_t The port number the listener is bound to, or 0 if no listener exists.
+         */
+        uint16_t
+        getListenPort () const;
+
         /* It is unsafe to move nixlAgent object */
         nixlAgent(nixlAgent&&) noexcept = delete;
         nixlAgent &operator=(nixlAgent&&) noexcept = delete;

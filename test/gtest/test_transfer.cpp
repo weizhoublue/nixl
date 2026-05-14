@@ -103,7 +103,7 @@ protected:
     getConfig(int listen_port, bool capture_telemetry) {
         nixlAgentConfig cfg;
         cfg.useProgThread = isProgressThreadEnabled();
-        cfg.useListenThread = (listen_port > 0);
+        cfg.useListenThread = true;
         cfg.listenPort = listen_port;
         cfg.syncMode = nixl_thread_sync_t::NIXL_THREAD_SYNC_RW;
         cfg.captureTelemetry = capture_telemetry;
@@ -131,9 +131,9 @@ protected:
 
     void
     addAgent(unsigned int agent_num, bool capture_telemetry = false) {
-        ports.push_back(PortAllocator::next_tcp_port());
         agents.emplace_back(std::make_unique<nixlAgent>(
-            getAgentName(agent_num), getConfig(getPort(agent_num), capture_telemetry)));
+            getAgentName(agent_num), getConfig(0, capture_telemetry)));
+        ports.push_back(agents.back()->getListenPort());
         nixlBackendH *backend_handle = nullptr;
         nixl_status_t status =
             agents.back()->createBackend(getBackendName(), getBackendParams(), backend_handle);

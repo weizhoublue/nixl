@@ -361,7 +361,9 @@ nixlPosixEngine::checkXfer(nixlBackendReqH *handle) const {
 
 nixl_status_t
 nixlPosixEngine::releaseReqH(nixlBackendReqH *handle) const {
-    NIXL_ASSERT(handle != nullptr);
+    if (handle == nullptr) {
+        return NIXL_SUCCESS;
+    }
     delete handle;
     return NIXL_SUCCESS;
 }
